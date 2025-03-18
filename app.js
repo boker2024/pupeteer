@@ -1,45 +1,37 @@
-const express = require('express');
-const puppeteer = require('puppeteer');
-const cors = require('cors');
-const bodyParser = require('body-parser');
+const express = require("express");
+const puppeteer = require("puppeteer");
+const cors = require("cors");
+const bodyParser = require("body-parser");
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-app.post('/click-button', async (req, res) => {
-    const { url, buttonSelector } = req.body;
+app.post("/click-button", async (req, res) => {
+    const { url,selector } = req.body;
 
-    if (!url || !buttonSelector) {
-        return res.status(400).json({ error: "Missing required parameters (url, buttonSelector)" });
+    if (!url||!selector) {
+        return res.status(400).json({ error: "Missing required parameter: url|selector" });
     }
 
     try {
-        const browser = await puppeteer.launch({ headless: false }); // headless:false כדי לראות
+        const browser = await puppeteer.launch({ headless: false });
         const page = await browser.newPage();
-        await page.goto(url, { waitUntil: 'networkidle2' });
 
-        // מחכים שהכפתור יופיע
-        await page.waitForSelector(buttonSelector, { timeout: 5000 });
+        await page.goto(url, { waitUntil: "networkidle2" });
 
-        // מאזינים לאירוע של פתיחת דף חדש
-        const [newPage] = await Promise.all([
-            new Promise(resolve => browser.once('targetcreated', async target => {
-                const newPage = await target.page();
-                resolve(newPage);
-            })),
-            page.click(buttonSelector) // לחיצה על הכפתור
-        ]);
+        // מחכים שהלינק יופיע
+        await page.waitForSelector(selector, { timeout: 5000 });
 
-        if (newPage) {
-            await newPage.waitForTimeout(3000); // מוודאים שהעמוד נטען
-            const newPageUrl = newPage.url(); // שליפת ה-URL של הדף החדש
-            await browser.close();
-            return res.json({ success: true, newPageUrl });
-        } else {
-            await browser.close();
-            return res.status(500).json({ success: false, error: "No new page detected" });
-        }
+        // שליפת href
+        const pdfLink = await page.evaluate(() => {
+            const linkElement = document.querySelector(selector);
+            return linkElement ? linkElement.getAttribute("href") : null;
+        });
+
+        await browser.close();
+
+        res.json({ success: true, pdfLink });
 
     } catch (error) {
         console.error("Error:", error);
@@ -47,7 +39,7 @@ app.post('/click-button', async (req, res) => {
     }
 });
 
-// הפעלת השרת
+// הפעלת השרת על פורט 3000
 app.listen(3000, () => {
-    console.log('Puppeteer server is running on http://localhost:3000');
+    console.log("Server running on http://localhost:3000");
 });
