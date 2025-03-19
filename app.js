@@ -25,7 +25,7 @@ app.post("/click-button", async (req, res) => {
 
         // שליפת href
         const pdfLink = await page.evaluate(() => {
-            const linkElement = document.querySelector(selector);
+            const linkElement = document.querySelector(".p-pdf-link");
             return linkElement ? linkElement.getAttribute("href") : null;
         });
 
